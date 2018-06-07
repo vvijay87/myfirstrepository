@@ -1,0 +1,152 @@
+Manipulating Property Sets:
+
+var myArray=["Dieter","Thomas"];
+var myObject={"Composer":"Dieter","Singer":"Thomas"};
+var myAssocArray=[];
+myAssocArray["Composer"]="Dieter";
+myAssocArray["Singer"]="Thomas";
+
+console.log( "for i myArray" );
+
+for(var i=0;i<myArray.length;i++){
+    console.log( "\t"+i+" "+myArray[i] );
+}
+
+console.log( "for in myObject" );
+for(var key in myObject){
+    console.log( "\t"+key+ " "+myObject[key] );
+}
+console.log( "\t"+"myObject.length=" + myObject.length );
+
+console.log( "for in myAssocArray" );
+for(var key in myAssocArray){
+    console.log( "\t"+key+ " "+myAssocArray[key] );
+}
+console.log( "\t"+"myAssocArray.length=" + myAssocArray.length );
+
+
+Sample:
+
+sWFOutputPS = oWFBS.InvokeMethod("RunProcess", sWFInputPS);
+
+var sWFResultSet = sWFOutputPS.GetChildByType("ResultSet");
+var s = sWFResultSet.propArray;
+
+for(var key in sTest){
+	console.log( "Key Name :"+key+ " Key Value "+sTest[key]);
+}
+
+
+WriteRecord in PR:
+
+this.GetPM().ExecuteMethod( "InvokeMethod", "WriteRecord",  null, false );
+
+
+Get Applet Name in PR:
+
+Option 1:
+var sAppletName = this.GetPM().GetObjName();
+
+Option 2:
+var sAppletArray = SiebelApp.S_App.GetActiveView().GetAppletMap(); 
+for(var i in sAppletArray)
+{
+	sApplet = sAppletArray[i];
+	sAppletName = sApplet.GetName();
+}
+
+Get Control Name in PR:
+
+Option 1:
+var sPM = this.GetPM();
+var sControls = sPM.Get( "GetControls" );
+var sCustomButton = sControls[ "Custom Button" ];
+var sCustomButtonName = sCustomButton.GetInputName();
+
+Option 2 (Errors out if Control is not present):
+var sCustomButton = SiebelApp.S_App.GetActiveView().GetApplet(sAppletName).GetControl("Custom Button").GetInputName();
+
+Handling Custom Method in PM:
+
+TestPM.prototype.Init = function () {
+	SiebelAppFacade.TestPM.superclass.Init.apply(this, arguments);
+	this.AddMethod( "InvokeMethod", PreInvokeMethod, { sequence : true, scope : this } );
+}
+
+function PreInvokeMethod (methodName, psInputArgs, lp, returnStructure)
+{
+	if (methodName === "CustomMethod")
+	{
+		//Code to be executed
+		returnStructure["CancelOperation"] = true;
+		returnStructure["ReturnValue"] = "";
+		SiebelApp.S_App.uiStatus.Free();
+	}
+	
+	if (methodName === "NewRecord")
+	{
+		//Code to be executed
+	}
+}
+
+Invoke Custom Method in PM after executing the same Method in Server Script:
+
+Server Script:
+function WebApplet_PreInvokeMethod (MethodName)
+{
+	if(MethodName == "CustomMethod")
+	{
+		//Code to be executed
+		return (CancelOperation);
+	}
+	return (ContinueOperation);
+}
+
+PM:
+TestPM.prototype.Init = function () {
+	SiebelAppFacade.TestPM.superclass.Init.apply(this, arguments);
+	this.AttachPostProxyExecuteBinding("CustomMethod", PostCustomMethod);
+}
+
+function PostCustomMethod()
+{
+	//Code to be executed
+}
+
+Multi Select - Get Field Value in PM:
+
+Option 1 (jQuery):
+var sAppletId = SiebelApp.S_App.GetActiveView().GetApplet("Applet Name").GetFullId();
+var sFieldValue = new Array();
+$("#"+sAppletId).find("input[name$='SelectAll']").each(function ()
+{
+	var sCheckboxValue = $(this).attr('aria-checked');
+	if (sCheckboxValue == "true")
+	{
+		$(this).parent().parent().children().each(function()
+		{              
+			var sElementId = $(this).attr("id");
+			if(sElementId && sElementId.indexOf("MF_Sales_Order_Number") != "-1")
+			{
+				sFieldValue.push($(this).text());
+			}
+		});
+	}
+});
+
+Option 2 (Open UI):
+//GetRawRecordSet fetches Id field value whereas GetRecordSet fecthes values from the fields displayed in UI
+if (methodName == "CustomMethod")
+{
+	var sRowsSelectedArray = this.Get("GetRowsSelectedArray");
+	for (var i=0;i<sRowsSelectedArray.length;i++)
+	{
+		if(sRowsSelectedArray[i])
+		{
+			var sRawRecordSet = this.Get("GetRawRecordSet")[i];
+		}
+	}
+	returnStructure ["CancelOperation"] = true ;
+	returnStructure["ReturnValue"] = "";
+	SiebelApp.S_App.uiStatus.Free();
+}
